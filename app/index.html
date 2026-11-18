@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Wanderlust — share trips, find experiences</title>
+<meta name="description" content="Wanderlust: a travel social app mixing Instagram-style sharing with TripAdvisor-style reviews. Interactive prototype by Wendel de Freitas.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<style>
+:root{--bg:#0B0B10;--card:#13131A;--card2:#1C1C26;--line:rgba(255,255,255,.07);--mut:rgba(255,255,255,.55);--dim:rgba(255,255,255,.35);--coral:#FF6B6B;--amber:#FF8E53;--grad:linear-gradient(135deg,#FF6B6B,#FF8E53);--teal:#2EC4B6;--gold:#FFC857;--ok:#00E676}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;background:#050507;font-family:'DM Sans',system-ui,sans-serif;color:#fff}
+body{display:flex;align-items:center;justify-content:center}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+input,textarea{font:inherit;color:#fff}
+.phone{position:relative;width:390px;height:844px;background:var(--bg);border-radius:48px;overflow:hidden;box-shadow:0 0 0 10px #1a1a22,0 0 0 11px #2a2a35,0 40px 100px rgba(0,0,0,.6);display:flex;flex-direction:column}
+body.embed{background:transparent}
+body.embed .phone{box-shadow:0 0 0 8px #1a1a22,0 0 0 9px #2a2a35}
+body.bare .phone{border-radius:0;box-shadow:none;width:100vw;height:100vh;max-width:none}
+@media (max-width:430px){.phone{width:100vw;height:100dvh;border-radius:0;box-shadow:none}}
+.status{height:44px;flex:0 0 44px;display:flex;align-items:center;justify-content:space-between;padding:0 28px;font-size:14px;font-weight:700}
+.status i{font-style:normal;letter-spacing:2px;font-size:11px}
+.top{display:flex;align-items:center;justify-content:space-between;padding:4px 18px 10px}
+.logo{font-family:Syne;font-weight:800;font-size:26px;letter-spacing:-.5px;background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent}
+.icons{display:flex;gap:6px}
+.ib{width:38px;height:38px;border-radius:50%;background:var(--card2);display:grid;place-items:center;position:relative}
+.ib svg{width:19px;height:19px}
+.dot{position:absolute;top:7px;right:8px;width:8px;height:8px;border-radius:50%;background:var(--coral);border:2px solid var(--card2)}
+main{flex:1;overflow-y:auto;scrollbar-width:none;position:relative}
+main::-webkit-scrollbar{display:none}
+.screen{display:none;padding-bottom:96px}
+.screen.on{display:block;animation:fade .25s ease}
+@keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+/* nav */
+.nav{position:absolute;left:12px;right:12px;bottom:14px;height:66px;border-radius:24px;background:rgba(22,22,30,.92);backdrop-filter:blur(16px);border:1px solid var(--line);display:flex;align-items:center;justify-content:space-around;z-index:50}
+.nav button{display:flex;flex-direction:column;align-items:center;gap:3px;font-size:10px;font-weight:600;color:var(--dim);width:58px}
+.nav button svg{width:22px;height:22px}
+.nav button.on{color:#fff}
+.nav button.on svg{stroke:var(--coral)}
+.nav .plus{width:52px;height:52px;border-radius:18px;background:var(--grad);display:grid;place-items:center;margin-top:-4px;box-shadow:0 10px 24px rgba(255,107,107,.4)}
+.nav .plus svg{stroke:#fff;width:24px;height:24px}
+svg{fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+/* stories */
+.stories{display:flex;gap:14px;padding:4px 18px 14px;overflow-x:auto;scrollbar-width:none}
+.story{flex:0 0 auto;display:flex;flex-direction:column;align-items:center;gap:6px;font-size:11px;color:var(--mut);width:66px}
+.ring{width:64px;height:64px;border-radius:50%;padding:2.5px;background:var(--grad)}
+.ring.seen{background:#33333f}
+.ring img{width:100%;height:100%;border-radius:50%;object-fit:cover;border:3px solid var(--bg)}
+.ring.me{background:none;border:2px dashed #44444f;display:grid;place-items:center;font-size:26px;color:var(--mut)}
+.chips{display:flex;gap:8px;padding:0 18px 14px;overflow-x:auto;scrollbar-width:none}
+.chip{flex:0 0 auto;padding:8px 15px;border-radius:99px;background:var(--card2);font-size:13px;font-weight:600;color:var(--mut);border:1px solid var(--line)}
+.chip.on{background:#fff;color:#111}
+/* post */
+.post{margin:0 12px 18px;background:var(--card);border-radius:26px;overflow:hidden;border:1px solid var(--line)}
+.ph{display:flex;align-items:center;gap:10px;padding:12px 14px}
+.av{width:40px;height:40px;border-radius:50%;object-fit:cover;flex:0 0 auto}
+.who{flex:1;min-width:0}
+.who b{font-size:14px;display:flex;align-items:center;gap:5px}
+.who small{display:flex;align-items:center;gap:4px;font-size:12px;color:var(--mut);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.who small svg{width:12px;height:12px;stroke:var(--coral);flex:0 0 auto}
+.badge{font-size:9px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;padding:3px 7px;border-radius:6px;background:rgba(46,196,182,.15);color:var(--teal)}
+.verified{width:14px;height:14px;border-radius:50%;background:#3D9BFF;display:inline-grid;place-items:center;font-size:9px;color:#fff}
+.media{position:relative;aspect-ratio:4/5;background:#222;overflow:hidden}
+.track{display:flex;height:100%;transition:transform .35s ease}
+.track img{flex:0 0 100%;width:100%;height:100%;object-fit:cover}
+.pips{position:absolute;bottom:12px;left:0;right:0;display:flex;justify-content:center;gap:5px}
+.pips span{width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,.45)}
+.pips span.on{background:#fff;width:16px;border-radius:4px}
+.cat{position:absolute;top:12px;left:12px;padding:6px 11px;border-radius:99px;background:rgba(0,0,0,.45);backdrop-filter:blur(8px);font-size:11px;font-weight:700}
+.price{position:absolute;top:12px;right:12px;padding:6px 11px;border-radius:99px;background:rgba(0,0,0,.45);backdrop-filter:blur(8px);font-size:11px;font-weight:700;color:var(--gold)}
+.burst{position:absolute;inset:0;display:grid;place-items:center;pointer-events:none;opacity:0}
+.burst svg{width:110px;height:110px;fill:#fff;stroke:none;filter:drop-shadow(0 6px 20px rgba(0,0,0,.4))}
+.burst.go{animation:pop .8s ease}
+@keyframes pop{0%{opacity:0;transform:scale(.4)}25%{opacity:1;transform:scale(1.1)}60%{opacity:1;transform:scale(1)}100%{opacity:0;transform:scale(1)}}
+.acts{display:flex;align-items:center;gap:16px;padding:12px 14px 6px}
+.acts button{display:flex;align-items:center;gap:6px;font-size:13px;font-weight:600;color:var(--mut)}
+.acts svg{width:22px;height:22px;stroke:#fff}
+.acts .liked svg{fill:var(--coral);stroke:var(--coral)}
+.acts .saved svg{fill:#fff}
+.acts .sp{flex:1}
+.stars{display:inline-flex;gap:2px;color:var(--gold);font-size:13px;letter-spacing:1px}
+.cap{padding:2px 14px 6px;font-size:13.5px;line-height:1.5;color:rgba(255,255,255,.88)}
+.cap b{color:#fff}
+.tags{padding:0 14px 6px;font-size:13px;color:#7FB8FF;display:flex;flex-wrap:wrap;gap:6px}
+.rev{margin:6px 14px 10px;padding:10px 12px;border-radius:14px;background:var(--card2);font-size:12.5px;line-height:1.45;color:var(--mut);border-left:3px solid var(--gold)}
+.pf{display:flex;align-items:center;justify-content:space-between;padding:4px 14px 14px;font-size:12px;color:var(--dim)}
+.book{padding:9px 16px;border-radius:12px;background:var(--grad);font-size:13px;font-weight:700;color:#fff}
+.link{color:var(--mut);font-size:12px;font-weight:600}
+/* explore */
+.h1{font-family:Syne;font-weight:800;font-size:28px;padding:4px 18px 4px;letter-spacing:-.5px}
+.sub{padding:0 18px 14px;color:var(--mut);font-size:13px}
+.search{margin:0 18px 14px;display:flex;align-items:center;gap:10px;padding:13px 16px;border-radius:16px;background:var(--card2);border:1px solid var(--line)}
+.search svg{width:18px;height:18px;stroke:var(--mut)}
+.search input{flex:1;background:none;border:0;outline:0;font-size:14px}
+.sec{display:flex;justify-content:space-between;align-items:baseline;padding:6px 18px 10px}
+.sec h3{font-family:Syne;font-size:17px}
+.sec span{font-size:12px;color:var(--coral);font-weight:600}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:0 18px 18px}
+.dest{position:relative;border-radius:20px;overflow:hidden;aspect-ratio:3/4;text-align:left}
+.dest:first-child{grid-row:span 2;aspect-ratio:auto}
+.dest img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.dest:after{content:"";position:absolute;inset:0;background:linear-gradient(transparent 45%,rgba(0,0,0,.75))}
+.dest div{position:absolute;left:12px;right:12px;bottom:11px;z-index:1}
+.dest b{display:block;font-size:15px}
+.dest small{font-size:11px;color:rgba(255,255,255,.75)}
+.list{padding:0 18px}
+.row{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--line);width:100%;text-align:left}
+.row img{width:60px;height:60px;border-radius:14px;object-fit:cover}
+.row div{flex:1}
+.row b{font-size:14px;display:block}
+.row small{font-size:12px;color:var(--mut)}
+.score{font-weight:800;font-size:14px;color:var(--gold)}
+.empty{padding:40px 18px;text-align:center;color:var(--mut);font-size:14px}
+/* map */
+#map{height:400px;margin:0 12px;border-radius:24px;overflow:hidden;border:1px solid var(--line);background:#111}
+.leaflet-container{background:#0e0e14;font-family:'DM Sans'}
+.leaflet-control-attribution{background:rgba(0,0,0,.5)!important;color:#888!important;font-size:9px}.leaflet-control-attribution a{color:#aaa!important}
+.mapnote{margin:4px 18px 0;padding:14px 16px;border-radius:18px;background:var(--card);border:1px solid var(--line);font-size:13px;color:var(--mut);line-height:1.5}.mapnote b{color:#fff}
+.pin{width:38px;height:38px;border-radius:50%;border:3px solid #fff;overflow:hidden;box-shadow:0 6px 18px rgba(0,0,0,.5)}
+.pin img{width:100%;height:100%;object-fit:cover}
+.pin.prov{border-color:var(--teal)}
+.mapcard{position:absolute;left:24px;right:24px;bottom:96px;display:none;align-items:center;gap:12px;padding:10px;border-radius:20px;background:rgba(22,22,30,.96);border:1px solid var(--line);z-index:40}
+.mapcard.on{display:flex;animation:fade .2s}
+.mapcard img{width:64px;height:64px;border-radius:14px;object-fit:cover}
+.mapcard div{flex:1;min-width:0}
+.mapcard b{font-size:14px;display:block}
+.mapcard small{font-size:12px;color:var(--mut)}
+.legend{display:flex;gap:16px;padding:12px 20px;font-size:12px;color:var(--mut)}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px;border:2px solid #fff;vertical-align:-1px}
+.legend i.p{border-color:var(--teal)}
+/* trips */
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;padding:0 18px 18px}
+.stat{padding:16px 12px;border-radius:20px;background:var(--card);border:1px solid var(--line)}
+.stat b{font-family:Syne;font-size:26px;display:block}
+.stat small{font-size:11px;color:var(--mut)}
+.stat:first-child b{background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent}
+.trip{margin:0 18px 12px;border-radius:22px;overflow:hidden;position:relative;height:150px;display:block;width:calc(100% - 36px);text-align:left}
+.trip img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.trip:after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,rgba(0,0,0,.8),transparent 75%)}
+.trip div{position:absolute;left:16px;bottom:14px;top:14px;z-index:1;display:flex;flex-direction:column;justify-content:space-between}
+.trip b{font-family:Syne;font-size:20px}
+.trip small{font-size:12px;color:rgba(255,255,255,.8)}
+.trip .st{align-self:flex-start;font-size:10px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;padding:4px 9px;border-radius:7px;background:var(--grad)}
+.trip .st.done{background:rgba(255,255,255,.2)}
+.bar{height:5px;border-radius:3px;background:rgba(255,255,255,.2);width:150px;overflow:hidden}
+.bar span{display:block;height:100%;background:var(--grad)}
+/* profile */
+.cover{height:170px;position:relative}
+.cover img{width:100%;height:100%;object-fit:cover}
+.cover:after{content:"";position:absolute;inset:0;background:linear-gradient(transparent 40%,var(--bg))}
+.pmain{padding:0 18px;margin-top:-50px;position:relative;z-index:1}
+.pav{width:96px;height:96px;border-radius:50%;border:4px solid var(--bg);object-fit:cover}
+.pname{font-family:Syne;font-size:24px;font-weight:800;margin-top:6px}
+.phandle{color:var(--mut);font-size:13px}
+.bio{font-size:13.5px;line-height:1.5;margin:10px 0 14px;color:rgba(255,255,255,.85)}
+.pstats{display:flex;justify-content:space-between;padding:14px 6px;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+.pstats div{text-align:center}
+.pstats b{font-family:Syne;font-size:19px;display:block}
+.pstats small{font-size:11px;color:var(--mut)}
+.pbtns{display:flex;gap:8px;margin:14px 0}
+.pbtns button{flex:1;padding:11px;border-radius:14px;font-weight:700;font-size:13px;background:var(--card2);border:1px solid var(--line)}
+.pbtns .pri{background:var(--grad);border:0}
+.pgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:3px;padding:0 0 18px}
+.pgrid img{width:100%;aspect-ratio:1;object-fit:cover}
+/* sheets */
+.sheet{position:absolute;inset:0;z-index:100;display:none;background:rgba(0,0,0,.55);backdrop-filter:blur(4px)}
+.sheet.on{display:block}
+.panel{position:absolute;left:0;right:0;bottom:0;max-height:92%;overflow-y:auto;background:var(--card);border-radius:30px 30px 0 0;padding:10px 18px 30px;animation:up .28s ease;scrollbar-width:none}
+.panel.full{top:0;max-height:none;border-radius:0;padding-top:0}
+@keyframes up{from{transform:translateY(40px);opacity:0}to{transform:none;opacity:1}}
+.grab{width:40px;height:5px;border-radius:3px;background:#3a3a46;margin:0 auto 14px}
+.phead{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.phead h2{font-family:Syne;font-size:20px}
+.x{width:34px;height:34px;border-radius:50%;background:var(--card2);display:grid;place-items:center}
+.x svg{width:16px;height:16px}
+.seg{display:flex;padding:4px;border-radius:14px;background:var(--card2);margin-bottom:14px}
+.seg button{flex:1;padding:10px;border-radius:11px;font-size:13px;font-weight:700;color:var(--mut)}
+.seg button.on{background:#fff;color:#111}
+.picks{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:14px}
+.picks button{position:relative;aspect-ratio:1;border-radius:12px;overflow:hidden}
+.picks img{width:100%;height:100%;object-fit:cover}
+.picks button.on:after{content:"✓";position:absolute;inset:0;display:grid;place-items:center;background:rgba(255,107,107,.55);font-weight:800;font-size:20px;border:2px solid var(--coral);border-radius:12px}
+.fld{display:flex;align-items:center;gap:10px;padding:13px 14px;border-radius:14px;background:var(--card2);margin-bottom:10px;border:1px solid var(--line)}
+.fld svg{width:18px;height:18px;stroke:var(--coral);flex:0 0 auto}
+.fld input,.fld textarea{flex:1;background:none;border:0;outline:0;font-size:14px;resize:none}
+.lbl{font-size:12px;font-weight:700;color:var(--mut);margin:6px 2px 8px;text-transform:uppercase;letter-spacing:.8px}
+.rate{display:flex;gap:6px;margin-bottom:16px}
+.rate button{font-size:28px;color:#3a3a46;line-height:1}
+.rate button.on{color:var(--gold)}
+.cta{width:100%;padding:15px;border-radius:16px;background:var(--grad);font-weight:800;font-size:15px}
+.cta:disabled{opacity:.4}
+.shareto{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:16px}
+.shareto button{display:flex;flex-direction:column;align-items:center;gap:6px;font-size:11px;color:var(--mut)}
+.shareto img{width:56px;height:56px;border-radius:50%;object-fit:cover}
+.shareto .ico{width:56px;height:56px;border-radius:50%;background:var(--card2);display:grid;place-items:center}
+.shareto .ico svg{width:22px;height:22px}
+/* chat */
+.chathead{display:flex;align-items:center;gap:10px;padding:52px 4px 12px;border-bottom:1px solid var(--line)}
+.chathead .who small{color:var(--ok)}
+.msgs{display:flex;flex-direction:column;gap:8px;padding:16px 2px;min-height:560px}
+.bub{max-width:76%;padding:10px 14px;border-radius:18px;font-size:14px;line-height:1.4;background:var(--card2)}
+.bub.me{align-self:flex-end;background:var(--grad);border-bottom-right-radius:6px}
+.bub.them{border-bottom-left-radius:6px}
+.bub small{display:block;font-size:10px;opacity:.6;margin-top:3px}
+.ctx{align-self:center;display:flex;gap:10px;align-items:center;padding:8px;border-radius:16px;background:var(--card2);border:1px solid var(--line);margin-bottom:6px;font-size:12px;color:var(--mut)}
+.ctx img{width:44px;height:44px;border-radius:10px;object-fit:cover}
+.typing{align-self:flex-start;font-size:12px;color:var(--mut);padding:4px 6px}
+.composer{position:sticky;bottom:0;display:flex;gap:8px;padding:10px 0 4px;background:var(--card)}
+.composer input{flex:1;padding:13px 16px;border-radius:99px;background:var(--card2);border:1px solid var(--line);outline:0}
+.composer button{width:46px;height:46px;border-radius:50%;background:var(--grad);display:grid;place-items:center}
+.composer svg{width:18px;height:18px}
+.inbox .row{border:0}
+.inbox img{border-radius:50%;width:52px;height:52px}
+.unread{width:9px;height:9px;border-radius:50%;background:var(--coral)}
+/* detail */
+.dhero{position:relative;height:340px;margin:0 -18px}
+.dhero img{width:100%;height:100%;object-fit:cover}
+.dhero .x{position:absolute;top:52px;left:16px;background:rgba(0,0,0,.45)}
+.dtitle{font-family:Syne;font-size:24px;font-weight:800;margin:16px 0 4px}
+.dloc{font-size:13px;color:var(--mut);display:flex;align-items:center;gap:5px}
+.dloc svg{width:14px;height:14px;stroke:var(--coral)}
+.sumbox{display:flex;align-items:center;gap:16px;padding:16px;border-radius:20px;background:var(--card2);margin:16px 0}
+.sumbox .big{font-family:Syne;font-size:42px;font-weight:800;line-height:1}
+.bars{flex:1;display:flex;flex-direction:column;gap:4px}
+.bars div{display:flex;align-items:center;gap:8px;font-size:11px;color:var(--mut)}
+.bars span{flex:1;height:5px;border-radius:3px;background:#2a2a35;overflow:hidden}
+.bars i{display:block;height:100%;background:var(--gold)}
+.review{padding:12px 0;border-bottom:1px solid var(--line)}
+.review .top2{display:flex;align-items:center;gap:10px;margin-bottom:6px}
+.review img{width:34px;height:34px;border-radius:50%;object-fit:cover}
+.review b{font-size:13px;display:block}
+.review p{font-size:13px;line-height:1.5;color:rgba(255,255,255,.82)}
+.toast{position:absolute;left:50%;top:56px;transform:translateX(-50%) translateY(-20px);opacity:0;padding:10px 16px;border-radius:99px;background:#fff;color:#111;font-size:13px;font-weight:700;z-index:200;transition:.25s;white-space:nowrap}
+.toast.on{opacity:1;transform:translateX(-50%)}
+.notif .row img{border-radius:50%;width:46px;height:46px}
+.notif .row .thumb{width:46px;height:46px;border-radius:10px}
+.notif small b{color:#fff}
+</style>
+</head>
+<body>
+<div class="phone" id="phone">
+  <div class="status"><span>9:41</span><i>●●●● 5G ▮▮▮</i></div>
+  <main id="main">
+
+    <!-- FEED -->
+    <section class="screen on" id="s-feed">
+      <div class="top">
+        <div class="logo">wanderlust</div>
+        <div class="icons">
+          <button class="ib" onclick="openSheet('notif')" aria-label="Notifications"><svg viewBox="0 0 24 24"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg><span class="dot"></span></button>
+          <button class="ib" onclick="openSheet('inbox')" aria-label="Messages"><svg viewBox="0 0 24 24"><path d="M22 2 11 13"/><path d="M22 2 15 22l-4-9-9-4 20-7z"/></svg><span class="dot"></span></button>
+        </div>
+      </div>
+      <div class="stories" id="stories"></div>
+      <div class="chips" id="chips"></div>
+      <div id="feed"></div>
+    </section>
+
+    <!-- EXPLORE -->
+    <section class="screen" id="s-explore">
+      <div class="h1">Explore</div>
+      <div class="sub">Real trips from travelers and verified providers.</div>
+      <label class="search"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg><input id="q" placeholder="Search places, experiences, people" oninput="renderExplore()"></label>
+      <div class="sec"><h3>Trending now</h3><span>See all</span></div>
+      <div class="grid" id="trend"></div>
+      <div class="sec"><h3>Top rated experiences</h3><span>Filter</span></div>
+      <div class="list" id="top"></div>
+    </section>
+
+    <!-- MAP -->
+    <section class="screen" id="s-map">
+      <div class="h1">Map</div>
+      <div class="sub">Every post is geotagged. Tap a pin.</div>
+      <div id="map"></div>
+      <div class="legend"><span><i></i>Travelers</span><span><i class="p"></i>Providers</span></div>
+      <div class="mapnote"><b>10 places</b> across 5 continents in your network. Pins with a teal ring are verified providers you can book or message.</div>
+    </section>
+
+    <!-- TRIPS -->
+    <section class="screen" id="s-trips">
+      <div class="h1">My trips</div>
+      <div class="sub">Plans, past journeys and saved places.</div>
+      <div class="stats"><div class="stat"><b>23</b><small>Countries</small></div><div class="stat"><b>61</b><small>Cities</small></div><div class="stat"><b id="savedCount">0</b><small>Saved</small></div></div>
+      <div class="sec"><h3>Upcoming</h3><span>+ New trip</span></div>
+      <div id="trips"></div>
+      <div class="sec"><h3>Saved places</h3><span>Collections</span></div>
+      <div class="list" id="saved"></div>
+    </section>
+
+    <!-- PROFILE -->
+    <section class="screen" id="s-profile">
+      <div class="cover"><img src="https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800&q=70" alt=""></div>
+      <div class="pmain">
+        <img class="pav" src="https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=300&q=70" alt="">
+        <div class="pname">Leo Martins</div>
+        <div class="phandle">@leo.goes · Miami, FL</div>
+        <div class="bio">Slow traveler, fast walker. 23 countries, one carry-on. Reviewing every place I'd send my mom to. ✈️</div>
+        <div class="pstats"><div><b id="postCount">48</b><small>Posts</small></div><div><b>12.4K</b><small>Followers</small></div><div><b>318</b><small>Following</small></div><div><b>96</b><small>Reviews</small></div></div>
+        <div class="pbtns"><button class="pri" onclick="toast('Profile editor coming soon')">Edit profile</button><button onclick="openShare(null)">Share profile</button></div>
+      </div>
+      <div class="pgrid" id="pgrid"></div>
+    </section>
+  </main>
+
+  <nav class="nav">
+    <button class="on" data-s="feed" onclick="go('feed')"><svg viewBox="0 0 24 24"><path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg>Home</button>
+    <button data-s="explore" onclick="go('explore')"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="m16.2 7.8-2.1 6.3-6.3 2.1 2.1-6.3z"/></svg>Explore</button>
+    <button class="plus" onclick="openSheet('create')" aria-label="Create post"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button>
+    <button data-s="trips" onclick="go('trips')"><svg viewBox="0 0 24 24"><path d="M17.8 19.2 16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-2 3H4l-1 1 3 2 2 3 1-1v-3l3-2 3.5 5.3c.3.4.8.5 1.3.3l.5-.2c.4-.3.6-.7.5-1.2z"/></svg>Trips</button>
+    <button data-s="profile" onclick="go('profile')"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21v-1a6 6 0 0 1 6-6h4a6 6 0 0 1 6 6v1"/></svg>Profile</button>
+  </nav>
+  <button class="mapcard" id="mapcard"></button>
+
+  <!-- SHEETS -->
+  <div class="sheet" id="sh-create" onclick="bg(event)"><div class="panel">
+    <div class="grab"></div>
+    <div class="phead"><h2>New post</h2><button class="x" onclick="closeSheets()"><svg viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>
+    <div class="seg" id="ptype"><button class="on" data-t="traveler">I traveled</button><button data-t="provider">I'm a provider</button></div>
+    <div class="lbl">Photos</div>
+    <div class="picks" id="picks"></div>
+    <label class="fld"><svg viewBox="0 0 24 24"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0z"/><circle cx="12" cy="10" r="3"/></svg><input id="cLoc" placeholder="Tag a location"></label>
+    <label class="fld" style="align-items:flex-start"><svg viewBox="0 0 24 24"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg><textarea id="cCap" rows="3" placeholder="Tell the story… use #tags and @mentions"></textarea></label>
+    <div class="lbl">Rate the experience</div>
+    <div class="rate" id="crate"></div>
+    <button class="cta" id="publish" onclick="publish()">Publish</button>
+  </div></div>
+
+  <div class="sheet" id="sh-share" onclick="bg(event)"><div class="panel">
+    <div class="grab"></div>
+    <div class="phead"><h2>Share</h2><button class="x" onclick="closeSheets()"><svg viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>
+    <div class="lbl">Send to</div>
+    <div class="shareto" id="shareppl"></div>
+    <div class="lbl">More</div>
+    <div class="shareto">
+      <button onclick="shareDone('Link copied')"><span class="ico"><svg viewBox="0 0 24 24"><path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7"/><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"/></svg></span>Copy link</button>
+      <button onclick="shareDone('Added to your story')"><span class="ico"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 8v8M8 12h8"/></svg></span>Story</button>
+      <button onclick="shareDone('Saved to Kyoto 2027')"><span class="ico"><svg viewBox="0 0 24 24"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg></span>Trip board</button>
+      <button onclick="shareDone('Shared')"><span class="ico"><svg viewBox="0 0 24 24"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></svg></span>More</button>
+    </div>
+  </div></div>
+
+  <div class="sheet" id="sh-inbox" onclick="bg(event)"><div class="panel">
+    <div class="grab"></div>
+    <div class="phead"><h2>Messages</h2><button class="x" onclick="closeSheets()"><svg viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>
+    <div class="inbox" id="inbox"></div>
+  </div></div>
+
+  <div class="sheet" id="sh-notif" onclick="bg(event)"><div class="panel">
+    <div class="grab"></div>
+    <div class="phead"><h2>Activity</h2><button class="x" onclick="closeSheets()"><svg viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>
+    <div class="notif list" style="padding:0" id="notifs"></div>
+  </div></div>
+
+  <div class="sheet" id="sh-chat"><div class="panel full" id="chat"></div></div>
+  <div class="sheet" id="sh-detail"><div class="panel full" id="detail"></div></div>
+  <div class="toast" id="toast"></div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+const U=(id,w=800)=>`https://images.unsplash.com/photo-${id}?w=${w}&q=70&auto=format&fit=crop`;
+const IMG={kyoto:'1478436127897-769e1b3f0f36',elnido:'1531761535209-180857e963b9',santorini:'1570077188670-e3a8d69ac5ff',bali:'1537996194471-e657df975ab4',machu:'1587595431973-160d0d94add1',iceland:'1504893524553-b855bce32c67',morocco:'1489749798305-4fea3ae63d43',oia:'1533104816931-20fa691ff6ca',paris:'1502602898657-3e91760cbb34',tokyo:'1540959733332-eab4deabeeaf',maldives:'1514282401047-d79a71a590e8',lauter:'1530122037265-a5f1f91d3b99',rio:'1483729558449-99ef09a8c325',utah:'1469854523086-cc02fe5d8800',braies:'1476514525535-07fb3b4ae5f1',clouds:'1506905925346-21bda4d32df4'};
+const P={aiko:{name:'Aiko Tanaka',handle:'@aiko.wanders',av:'1494790108377-be9c29b29330',type:'traveler'},
+ nomad:{name:'Isla Retreats',handle:'@islaretreats',av:'1507003211169-0a1dd7228f2d',type:'provider',verified:true},
+ mara:{name:'Mara Lindqvist',handle:'@mara.north',av:'1438761681033-6461ffad8d80',type:'traveler'},
+ andes:{name:'Andes Trails Co.',handle:'@andestrails',av:'1500648767791-00dcc994a43e',type:'provider',verified:true},
+ me:{name:'Leo Martins',handle:'@leo.goes',av:'1500648767791-00dcc994a43e',type:'traveler'}};
+let posts=[
+ {id:1,u:'aiko',imgs:['kyoto','tokyo'],loc:'Fushimi Inari, Kyoto, Japan',ll:[34.967,135.773],cap:'Up at 5am for the torii gates with nobody else on the path. Just footsteps and cedar incense. Worth every lost hour of sleep.',tags:['#Kyoto','#Japan','#SoloTravel'],likes:2847,comments:134,rating:5,cat:'Temple',price:'Free',time:'2h',review:'Go at opening. The light through the gates before 7am is the whole point.',liked:false,saved:false},
+ {id:2,u:'nomad',imgs:['elnido','maldives'],loc:'El Nido, Palawan, Philippines',ll:[11.18,119.39],cap:'Island hopping, our way: 8 guests per boat, lunch grilled on a hidden beach, and lagoons before the crowds arrive. 2027 dates are open.',tags:['#ElNido','#IslandHopping','#Palawan'],likes:5621,comments:287,rating:4.9,cat:'Tour',price:'$89 / person',time:'5h',review:'Rated 4.9 from 1,240 verified guests.',liked:false,saved:true,book:true},
+ {id:3,u:'mara',imgs:['iceland','braies'],loc:'Fjaðrárgljúfur, Iceland',ll:[63.77,-18.17],cap:'Two kilometres of moss and drop-offs. Wind strong enough to lean into. Bring a real jacket, not the cute one.',tags:['#Iceland','#Canyon','#RoadTrip'],likes:1932,comments:76,rating:4.5,cat:'Nature',price:'Free',time:'1d',review:'Parking fills by 10am in summer. Trail is easy but the edges are not fenced.',liked:true,saved:false},
+ {id:4,u:'andes',imgs:['machu','rio'],loc:'Machu Picchu, Cusco, Peru',ll:[-13.163,-72.545],cap:'Sunrise entry, a licensed archaeologist as your guide, and the Huayna Picchu climb for those who want it. Small groups only.',tags:['#MachuPicchu','#Peru','#Andes'],likes:4410,comments:198,rating:4.8,cat:'Experience',price:'$145 / person',time:'2d',review:'Rated 4.8 from 860 verified guests.',liked:false,saved:false,book:true},
+ {id:5,u:'aiko',imgs:['santorini','oia'],loc:'Oia, Santorini, Greece',ll:[36.461,25.375],cap:'Skipped the sunset crush at the castle and watched from a rooftop café two streets back. Same view, half the elbows.',tags:['#Santorini','#Greece','#Sunset'],likes:3120,comments:142,rating:4,cat:'Viewpoint',price:'€€',time:'3d',review:'Lovely, but book dinner early. Prices double after 6pm.',liked:false,saved:true},
+];
+const extra=[{n:'Bali, Indonesia',k:'bali',s:'4.8 · 12K posts',ll:[-8.27,115.17]},{n:'Marrakech, Morocco',k:'morocco',s:'4.6 · 8.1K posts',ll:[31.63,-7.99]},{n:'Paris, France',k:'paris',s:'4.7 · 31K posts',ll:[48.858,2.294]},{n:'Lauterbrunnen, Switzerland',k:'lauter',s:'4.9 · 5.4K posts',ll:[46.59,7.91]},{n:'Moab, Utah',k:'utah',s:'4.7 · 3.9K posts',ll:[38.57,-109.55]}];
+let filter='All',ctype='traveler',cpicks=[],crating=0,mapObj=null;
+const $=s=>document.querySelector(s);
+const ico={pin:'<svg viewBox="0 0 24 24"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0z"/><circle cx="12" cy="10" r="3"/></svg>',heart:'<svg viewBox="0 0 24 24"><path d="M19 14c1.5-1.5 3-3.2 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.8 0-3 .5-4.5 2-1.5-1.5-2.7-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4 3 5.5l7 7Z"/></svg>',chat:'<svg viewBox="0 0 24 24"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/></svg>',send:'<svg viewBox="0 0 24 24"><path d="M22 2 11 13"/><path d="M22 2 15 22l-4-9-9-4 20-7z"/></svg>',save:'<svg viewBox="0 0 24 24"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>',dm:'<svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>'};
+const fmt=n=>n>=1000?(n/1000).toFixed(1).replace('.0','')+'K':n;
+const stars=r=>'★★★★★'.slice(0,Math.round(r))+'<span style="color:#3a3a46">'+'★★★★★'.slice(Math.round(r))+'</span>';
+function toast(t){const e=$('#toast');e.textContent=t;e.classList.add('on');clearTimeout(e._t);e._t=setTimeout(()=>e.classList.remove('on'),1800)}
+
+function renderStories(){
+ const s=[{me:1},{k:'aiko'},{k:'nomad'},{k:'mara'},{k:'andes'},{k:'aiko',seen:1,lab:'Kyoto'}];
+ $('#stories').innerHTML=s.map(x=>x.me?`<button class="story" onclick="openSheet('create')"><div class="ring me">+</div>Your trip</button>`:`<button class="story" onclick="toast('${P[x.k].name.split(' ')[0]}\\'s story')"><div class="ring ${x.seen?'seen':''}"><img src="${U(P[x.k].av,160)}" alt=""></div>${x.lab||P[x.k].name.split(' ')[0]}</button>`).join('');
+ $('#chips').innerHTML=['All','Travelers','Providers','Following','Nearby'].map(c=>`<button class="chip ${c===filter?'on':''}" onclick="filter='${c}';renderStories();renderFeed()">${c}</button>`).join('');
+}
+function postHTML(p){const u=P[p.u];return `
+ <article class="post" data-id="${p.id}">
+  <div class="ph"><img class="av" src="${U(u.av,120)}" alt=""><div class="who"><b>${u.name}${u.verified?'<span class="verified">✓</span>':''}${u.type==='provider'?'<span class="badge">Provider</span>':''}</b><small>${ico.pin}${p.loc}</small></div><button class="link" onclick="openChat('${p.u}',${p.id})">${u.type==='provider'?'Message':'· '+p.time}</button></div>
+  <div class="media" ondblclick="like(${p.id},true)"><div class="track" style="transform:translateX(${-(p.i||0)*100}%)">${p.imgs.map(k=>`<img src="${U(IMG[k]||k)}" alt="${p.loc}" draggable="false">`).join('')}</div>
+   <span class="cat">${p.cat}</span><span class="price">${p.price}</span>
+   ${p.imgs.length>1?`<div class="pips">${p.imgs.map((_,i)=>`<span class="${i===(p.i||0)?'on':''}" onclick="event.stopPropagation();slide(${p.id},${i})"></span>`).join('')}</div>`:''}
+   <div class="burst"><svg viewBox="0 0 24 24"><path d="M19 14c1.5-1.5 3-3.2 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.8 0-3 .5-4.5 2-1.5-1.5-2.7-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4 3 5.5l7 7Z"/></svg></div></div>
+  <div class="acts"><button class="${p.liked?'liked':''}" onclick="like(${p.id})">${ico.heart}${fmt(p.likes)}</button><button onclick="openDetail(${p.id})">${ico.chat}${p.comments}</button><button onclick="openShare(${p.id})">${ico.send}</button><span class="sp"></span><span class="stars">${stars(p.rating)}</span><button class="${p.saved?'saved':''}" onclick="save(${p.id})">${ico.save}</button></div>
+  <div class="cap"><b>${u.handle}</b> ${p.cap}</div>
+  <div class="tags">${p.tags.map(t=>`<span>${t}</span>`).join('')}</div>
+  <div class="rev">${p.review}</div>
+  <div class="pf"><button class="link" onclick="openDetail(${p.id})">View all ${p.comments} reviews</button>${p.book?`<button class="book" onclick="openChat('${p.u}',${p.id})">Book now</button>`:`<span>${p.time} ago</span>`}</div>
+ </article>`}
+function renderFeed(){
+ let l=posts;if(filter==='Travelers')l=posts.filter(p=>P[p.u].type==='traveler');if(filter==='Providers')l=posts.filter(p=>P[p.u].type==='provider');if(filter==='Following')l=posts.filter(p=>['aiko','mara','nomad'].includes(p.u));
+ $('#feed').innerHTML=l.length?l.map(postHTML).join(''):'<div class="empty">Nothing here yet.</div>';
+ bindSwipe();renderTrips();renderProfile();
+}
+function bindSwipe(){document.querySelectorAll('.media').forEach(m=>{let x0=null;m.addEventListener('pointerdown',e=>x0=e.clientX);m.addEventListener('pointerup',e=>{if(x0===null)return;const dx=e.clientX-x0;x0=null;if(Math.abs(dx)<40)return;const id=+m.closest('.post').dataset.id,p=posts.find(q=>q.id===id);slide(id,Math.max(0,Math.min(p.imgs.length-1,(p.i||0)+(dx<0?1:-1))))})})}
+function slide(id,i){const p=posts.find(q=>q.id===id);p.i=i;const el=document.querySelector(`.post[data-id="${id}"]`);el.querySelector('.track').style.transform=`translateX(${-i*100}%)`;el.querySelectorAll('.pips span').forEach((s,k)=>s.classList.toggle('on',k===i))}
+function like(id,dbl){const p=posts.find(q=>q.id===id);if(dbl&&p.liked){burst(id);return}p.liked=dbl?true:!p.liked;p.likes+=p.liked?1:-1;const el=document.querySelector(`.post[data-id="${id}"] .acts button`);el.classList.toggle('liked',p.liked);el.innerHTML=ico.heart+fmt(p.likes);if(p.liked)burst(id)}
+function burst(id){const b=document.querySelector(`.post[data-id="${id}"] .burst`);b.classList.remove('go');void b.offsetWidth;b.classList.add('go')}
+function save(id){const p=posts.find(q=>q.id===id);p.saved=!p.saved;document.querySelector(`.post[data-id="${id}"] .acts button:last-child`).classList.toggle('saved',p.saved);toast(p.saved?'Saved to your places':'Removed from saved');renderTrips()}
+
+function renderExplore(){
+ const q=($('#q').value||'').toLowerCase();
+ const all=[...posts.map(p=>({n:p.loc,k:p.imgs[0],s:`${p.rating} ★ · ${p.cat}`,id:p.id,txt:(p.loc+p.cap+p.tags.join(' ')+P[p.u].name).toLowerCase()})),...extra.map(e=>({...e,txt:e.n.toLowerCase()}))];
+ const f=all.filter(a=>!q||a.txt.includes(q));
+ $('#trend').innerHTML=f.slice(0,5).map(a=>`<button class="dest" onclick="${a.id?`openDetail(${a.id})`:`toast('${a.n}')`}"><img src="${U(IMG[a.k],500)}" alt=""><div><b>${a.n.split(',').slice(-2,-1)[0]?.trim()||a.n.split(',')[0]}</b><small>${a.n.split(',').pop().trim()}</small></div></button>`).join('')||'<div class="empty" style="grid-column:span 2">No places match “'+q+'”.</div>';
+ const top=posts.filter(p=>!q||(p.loc+p.cap).toLowerCase().includes(q)).sort((a,b)=>b.rating-a.rating);
+ $('#top').innerHTML=top.map(p=>`<button class="row" onclick="openDetail(${p.id})"><img src="${U(IMG[p.imgs[0]],200)}" alt=""><div><b>${p.loc.split(',')[0]}</b><small>${P[p.u].name} · ${p.price}</small></div><span class="score">${p.rating.toFixed(1)}</span></button>`).join('');
+}
+function initMap(){
+ if(mapObj){setTimeout(()=>mapObj.invalidateSize(),50);return}
+ if(!window.L){$('#map').innerHTML='<div class="empty">Map could not load.</div>';return}
+ mapObj=L.map('map',{zoomControl:false,attributionControl:true,worldCopyJump:true,zoomSnap:0.1}).setView([18,20],0.6);
+ L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}',{attribution:'Tiles © Esri',maxZoom:14}).addTo(mapObj);
+ const pts=[...posts.map(p=>({ll:p.ll,img:IMG[p.imgs[0]]||p.imgs[0],prov:P[p.u].type==='provider',t:p.loc.split(',')[0],s:P[p.u].name+' · '+p.rating+' ★',id:p.id})),...extra.map(e=>({ll:e.ll,img:IMG[e.k],t:e.n,s:e.s}))];
+ pts.forEach(p=>{if(!p.ll)return;const m=L.marker(p.ll,{icon:L.divIcon({className:'',html:`<div class="pin ${p.prov?'prov':''}"><img src="${U(p.img,120)}"></div>`,iconSize:[38,38],iconAnchor:[19,19]})}).addTo(mapObj);m.on('click',()=>{const c=$('#mapcard');c.innerHTML=`<img src="${U(p.img,200)}"><div><b>${p.t}</b><small>${p.s}</small></div><span class="book">${p.id?'Open':'Explore'}</span>`;c.onclick=()=>{c.classList.remove('on');p.id?openDetail(p.id):toast(p.t)};c.classList.add('on');mapObj.flyTo(p.ll,Math.max(mapObj.getZoom(),3),{duration:.8})})});
+}
+function renderTrips(){
+ const sv=posts.filter(p=>p.saved);$('#savedCount').textContent=sv.length+7;
+ $('#trips').innerHTML=[['kyoto','Kyoto & Tokyo','Mar 14 – Mar 26, 2027','12 days · 3 saved places',62,'Upcoming'],['machu','Peru: Sacred Valley','Jul 2 – Jul 11, 2027','Machu Picchu booked',30,'Planning'],['iceland','Iceland Ring Road','Sep 2026','8 posts · 14 reviews',100,'Done']].map(t=>`<button class="trip" onclick="toast('${t[1]}')"><img src="${U(IMG[t[0]],700)}" alt=""><div><span class="st ${t[5]==='Done'?'done':''}">${t[5]}</span><span><b>${t[1]}</b><br><small>${t[2]} · ${t[3]}</small></span><span class="bar"><span style="width:${t[4]}%"></span></span></div></button>`).join('');
+ $('#saved').innerHTML=sv.length?sv.map(p=>`<button class="row" onclick="openDetail(${p.id})"><img src="${U(IMG[p.imgs[0]]||p.imgs[0],200)}" alt=""><div><b>${p.loc.split(',')[0]}</b><small>${p.loc.split(',').slice(1).join(',').trim()} · ${p.cat}</small></div><span class="score">${p.rating.toFixed(1)}</span></button>`).join(''):'<div class="empty">Tap the bookmark on any post to save it here.</div>';
+}
+function renderProfile(){
+ const mine=posts.filter(p=>p.u==='me').map(p=>p.imgs[0]);
+ $('#postCount').textContent=48+mine.length;
+ $('#pgrid').innerHTML=[...mine,'iceland','paris','braies','utah','morocco','lauter','bali','rio','tokyo'].map(k=>`<img src="${U(IMG[k]||k,300)}" alt="">`).join('');
+}
+function go(s){
+ document.querySelectorAll('.screen').forEach(e=>e.classList.toggle('on',e.id==='s-'+s));
+ document.querySelectorAll('.nav button[data-s]').forEach(b=>b.classList.toggle('on',b.dataset.s===s));
+ $('#mapcard').classList.remove('on');$('#main').scrollTop=0;
+ if(s==='explore')renderExplore();if(s==='map')initMap();
+}
+function openSheet(n){closeSheets();$('#sh-'+n).classList.add('on');if(n==='create')initCreate();if(n==='inbox')renderInbox();if(n==='notif')renderNotif()}
+function closeSheets(){document.querySelectorAll('.sheet').forEach(s=>s.classList.remove('on'))}
+function bg(e){if(e.target.classList.contains('sheet'))closeSheets()}
+let shareId=null;
+function openShare(id){shareId=id;openSheet('share');$('#shareppl').innerHTML=['aiko','mara','nomad','andes'].map(k=>`<button onclick="shareDone('Sent to ${P[k].name.split(' ')[0]}')"><img src="${U(P[k].av,120)}" alt="">${P[k].name.split(' ')[0]}</button>`).join('')}
+function shareDone(t){closeSheets();toast(t);if(shareId){const p=posts.find(q=>q.id===shareId);if(p)p.shares=(p.shares||0)+1}}
+function initCreate(){
+ ctype='traveler';cpicks=[];crating=0;$('#cLoc').value='';$('#cCap').value='';
+ document.querySelectorAll('#ptype button').forEach(b=>{b.classList.toggle('on',b.dataset.t===ctype);b.onclick=()=>{ctype=b.dataset.t;document.querySelectorAll('#ptype button').forEach(x=>x.classList.toggle('on',x===b))}});
+ $('#picks').innerHTML=['bali','lauter','morocco','paris','utah','braies','rio','maldives'].map(k=>`<button data-k="${k}"><img src="${U(IMG[k],200)}" alt=""></button>`).join('');
+ document.querySelectorAll('#picks button').forEach(b=>b.onclick=()=>{const k=b.dataset.k;cpicks=cpicks.includes(k)?cpicks.filter(x=>x!==k):[...cpicks,k];b.classList.toggle('on');if(!$('#cLoc').value){const e=extra.find(x=>x.k===k);if(e)$('#cLoc').value=e.n}});
+ drawRate();
+}
+function drawRate(){$('#crate').innerHTML=[1,2,3,4,5].map(i=>`<button class="${i<=crating?'on':''}" onclick="crating=${i};drawRate()">★</button>`).join('')}
+function publish(){
+ if(!cpicks.length){toast('Pick at least one photo');return}
+ const cap=$('#cCap').value.trim()||'New trip, new stories.';const tags=(cap.match(/#\w+/g)||['#Wanderlust']);
+ const loc=$('#cLoc').value.trim()||'Somewhere beautiful';const e=extra.find(x=>loc.startsWith(x.n.split(',')[0]));
+ posts.unshift({id:Date.now(),u:'me',imgs:cpicks,loc,ll:e?e.ll:null,cap:cap.replace(/#\w+/g,'').trim()||cap,tags,likes:0,comments:0,rating:crating||5,cat:ctype==='provider'?'Experience':'Trip',price:ctype==='provider'?'Ask':'—',time:'now',review:crating?`Your rating: ${crating}/5`:'Add a rating to help other travelers.',liked:false,saved:false,book:ctype==='provider'});
+ closeSheets();filter='All';renderStories();renderFeed();go('feed');toast('Posted to your feed');
+}
+const threads={nomad:[['them','Hi! Thanks for your interest in island hopping 🌊'],['them','We have space on Mar 18 and Mar 21. Which works for you?']],aiko:[['them','The Fushimi tip saved my trip, thank you!'],['me','Go before 6 if you can, even better 🙏']],mara:[['me','Is the canyon trail ok in October?'],['them','Yes, just windy. Bring layers.']],andes:[['them','Sunrise permits for July are going fast.']]};
+function renderInbox(){$('#inbox').innerHTML=Object.keys(threads).map((k,i)=>`<button class="row" onclick="openChat('${k}')"><img src="${U(P[k].av,120)}" alt=""><div><b>${P[k].name}</b><small>${threads[k].at(-1)[1]}</small></div>${i<2?'<span class="unread"></span>':''}</button>`).join('')}
+function renderNotif(){const n=[['aiko','liked your post','kyoto','2m'],['nomad','replied to your question about <b>El Nido</b>','elnido','14m'],['mara','tagged you in <b>Fjaðrárgljúfur</b>','iceland','1h'],['andes','posted a new experience near your saved place','machu','3h'],['aiko','started following you',null,'1d']];$('#notifs').innerHTML=n.map(x=>`<div class="row"><img src="${U(P[x[0]].av,120)}" alt=""><div><small><b>${P[x[0]].name}</b> ${x[1]} · ${x[3]}</small></div>${x[2]?`<img class="thumb" src="${U(IMG[x[2]],120)}" alt="">`:'<button class="book" style="padding:7px 12px">Follow</button>'}</div>`).join('')}
+let chatWith=null;
+function openChat(k,pid){
+ chatWith=k;closeSheets();$('#sh-chat').classList.add('on');const u=P[k];const p=pid?posts.find(q=>q.id===pid):null;
+ $('#chat').innerHTML=`<div class="chathead"><button class="x" onclick="closeSheets()"><svg viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></svg></button><img class="av" src="${U(u.av,120)}" alt=""><div class="who"><b>${u.name}${u.verified?'<span class="verified">✓</span>':''}</b><small>● Online</small></div></div>
+ <div class="msgs" id="msgs">${p?`<div class="ctx"><img src="${U(IMG[p.imgs[0]]||p.imgs[0],120)}"><span>About: <b style="color:#fff">${p.loc.split(',')[0]}</b><br>${p.price}</span></div>`:''}${threads[k].map(m=>`<div class="bub ${m[0]}">${m[1]}</div>`).join('')}</div>
+ <form class="composer" onsubmit="event.preventDefault();sendMsg()"><input id="msgIn" placeholder="Message ${u.name.split(' ')[0]}…" autocomplete="off"><button type="submit">${ico.send}</button></form>`;
+}
+function sendMsg(){
+ const i=$('#msgIn'),t=i.value.trim();if(!t)return;i.value='';threads[chatWith].push(['me',t]);
+ const m=$('#msgs');m.insertAdjacentHTML('beforeend',`<div class="bub me">${t.replace(/</g,'&lt;')}</div><div class="typing" id="typing">typing…</div>`);m.scrollIntoView({block:'end'});
+ const rep=P[chatWith].type==='provider'?'Great, I can hold 2 spots for you. Want me to send the booking link? 🙌':'Haha yes! Let me know when you go 😄';
+ setTimeout(()=>{$('#typing')?.remove();threads[chatWith].push(['them',rep]);m.insertAdjacentHTML('beforeend',`<div class="bub them">${rep}</div>`)},1300);
+}
+const reviews={1:[['mara',5,'Absolutely worth the early alarm. The upper trail is quieter too.'],['andes',5,'Our guests always rank this a highlight of Kyoto.']],2:[['aiko',5,'Lunch on the beach was unreal. Crew was great with kids.'],['mara',4,'Lagoons were stunning. Bring reef-safe sunscreen.']],3:[['aiko',4,'Beautiful but very windy. Go early.']],4:[['mara',5,'Our guide knew everything. Huayna Picchu is steep but fine.'],['aiko',5,'Best day of the trip.']],5:[['mara',4,'Cute rooftop, pricey drinks.']]};
+let drate=0;
+function openDetail(id){
+ const p=posts.find(q=>q.id===id);if(!p)return;closeSheets();$('#sh-detail').classList.add('on');drate=0;const u=P[p.u];const r=reviews[id]=reviews[id]||[];
+ const dist=[5,4,3,2,1].map(s=>s===5?72:s===4?19:s===3?6:2);
+ $('#detail').innerHTML=`<div class="dhero"><img src="${U(IMG[p.imgs[0]]||p.imgs[0],900)}" alt=""><button class="x" onclick="closeSheets()"><svg viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></svg></button></div>
+ <div class="dtitle">${p.loc.split(',')[0]}</div><div class="dloc">${ico.pin}${p.loc.split(',').slice(1).join(',').trim()} · ${p.cat} · ${p.price}</div>
+ <div class="ph" style="padding:14px 0 0"><img class="av" src="${U(u.av,120)}" alt=""><div class="who"><b>${u.name}${u.verified?'<span class="verified">✓</span>':''}</b><small>${u.handle}</small></div><button class="book" onclick="openChat('${p.u}',${p.id})">${p.book?'Book':'Message'}</button></div>
+ <div class="sumbox"><div><div class="big">${p.rating.toFixed(1)}</div><span class="stars">${stars(p.rating)}</span><div style="font-size:11px;color:var(--mut);margin-top:4px">${p.comments} reviews</div></div><div class="bars">${dist.map((d,i)=>`<div>${5-i}<span><i style="width:${d}%"></i></span></div>`).join('')}</div></div>
+ <div class="lbl">Write a review</div><div class="rate" id="drate"></div>
+ <label class="fld"><textarea id="drev" rows="2" placeholder="What should the next traveler know?"></textarea></label>
+ <button class="cta" onclick="addReview(${id})" style="margin-bottom:18px">Post review</button>
+ <div class="lbl">Recent reviews</div><div id="revs">${r.map(revHTML).join('')}</div>`;
+ drawDRate();
+}
+function revHTML(x){const u=P[x[0]];return `<div class="review"><div class="top2"><img src="${U(u.av,100)}" alt=""><div><b>${u.name}</b><span class="stars">${stars(x[1])}</span></div></div><p>${x[2].replace(/</g,'&lt;')}</p></div>`}
+function drawDRate(){$('#drate').innerHTML=[1,2,3,4,5].map(i=>`<button class="${i<=drate?'on':''}" onclick="drate=${i};drawDRate()">★</button>`).join('')}
+function addReview(id){const t=$('#drev').value.trim();if(!drate){toast('Tap the stars to rate');return}const x=['me',drate,t||'Great experience.'];reviews[id].unshift(x);const p=posts.find(q=>q.id===id);p.comments++;$('#revs').insertAdjacentHTML('afterbegin',revHTML(x));$('#drev').value='';drate=0;drawDRate();toast('Review posted');renderFeed()}
+
+/* boot */
+const params=new URLSearchParams(location.search);
+if(params.has('embed'))document.body.classList.add('embed');
+if(params.has('bare'))document.body.classList.add('bare');
+renderStories();renderFeed();
+const start=params.get('screen');
+if(start){if(['feed','explore','map','trips','profile'].includes(start))go(start);else if(start==='create')openSheet('create');else if(start==='chat')openChat('nomad',2);else if(start==='detail')openDetail(4);else if(start==='inbox')openSheet('inbox');else if(start==='notif')openSheet('notif')}
+</script>
+</body>
+</html>
