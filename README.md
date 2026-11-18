@@ -1,6 +1,6 @@
 # Wanderlust
 
-A travel social app prototype that mixes Instagram-style trip sharing with TripAdvisor-style reviews. Travelers post where they went and rate it; tour operators, hotels and guides post what they offer and take bookings through direct messages.
+A travel social app prototype that mixes Instagram-style trip sharing with TripAdvisor-style reviews. Travelers post where they went and rate it; tour operators, hotels and guides post what they offer and take bookings in the app.
 
 - **Try it:** https://www.wendelfreitas.com/wanderlust/app/
 - **Case study:** https://www.wendelfreitas.com/wanderlust/
@@ -17,6 +17,9 @@ A travel social app prototype that mixes Instagram-style trip sharing with TripA
 - Direct messages that attach the post as context, with simulated replies
 - Place detail with rating distribution, write-a-review and recent reviews
 - Save, share sheet, trips with progress, profile and activity notifications
+- Booking flow for provider experiences: date picker with availability, time slots, guests, add-ons, live price breakdown, traveler details, payment choice and a confirmation with a booking code
+- Bookings land in My trips with their own page (meeting point, message host, cancel) and the host confirms in chat
+- Trip pages with itinerary, new-trip creation, collections, place pages, story viewer, profile editing, Explore filters and "See all"
 
 ## Screens
 
@@ -30,16 +33,17 @@ A travel social app prototype that mixes Instagram-style trip sharing with TripA
 
 | Path | Contents |
 |---|---|
-| `app/index.html` | The whole app: one HTML file, no framework, no build step. |
+| `app/index.html` | The core app: one HTML file, no framework, no build step. |
+| `app/wl-plus.js` | Booking flow and the extra pages (trips, collections, places, stories, profile editing), loaded after the core app. |
 | `docs/` | Screenshots, thumbnails and the cover image. |
 | `site/case-page.html` | The portfolio case study page. |
 | `scripts/shoot.py` | Playwright script that renders the screenshots. |
 
 ## Running
 
-Open `app/index.html` in a browser. URL options:
+Open `app/index.html` in a browser (keep `wl-plus.js` next to it). URL options:
 
-- `?screen=explore` (also `map`, `trips`, `profile`, `create`, `chat`, `detail`, `inbox`, `notif`) opens a given screen
+- `?screen=explore` (also `map`, `trips`, `profile`, `create`, `chat`, `detail`, `inbox`, `notif`, `book`, `trip`) opens a given screen
 - `?embed` for use inside an iframe, `?bare` for a full-bleed phone view
 
 All content is sample data and nothing is saved. Photos are from [Unsplash](https://unsplash.com).
